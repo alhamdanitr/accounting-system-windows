@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 
 namespace AccountingSystem.Desktop
 {
@@ -7,6 +8,15 @@ namespace AccountingSystem.Desktop
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void NavButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button != null)
+            {
+                TxtStatus.Text = $"تم فتح قسم: {button.Content}";
+            }
         }
     }
 }
