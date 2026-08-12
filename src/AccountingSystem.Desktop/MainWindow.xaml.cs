@@ -207,6 +207,38 @@ namespace AccountingSystem.Desktop
             return row;
         }
 
+        private Grid CreateListToolbar(string searchHint, string filterLabel, string primaryActionLabel, string exportLabel)
+        {
+            var toolbar = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) });
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+
+            var search = new TextBox { ToolTip = searchHint, Padding = new Thickness(9), Margin = new Thickness(0, 0, 8, 0) };
+            Grid.SetColumn(search, 0);
+            toolbar.Children.Add(search);
+
+            var filter = new ComboBox { ToolTip = "اختر نطاق التصفية", Padding = new Thickness(6), Margin = new Thickness(0, 0, 8, 0) };
+            filter.Items.Add(new ComboBoxItem { Content = filterLabel, IsSelected = true });
+            filter.Items.Add(new ComboBoxItem { Content = "الحركات النشطة" });
+            filter.Items.Add(new ComboBoxItem { Content = "الحركات المؤرشفة" });
+            Grid.SetColumn(filter, 1);
+            toolbar.Children.Add(filter);
+
+            var primary = new Button { Content = primaryActionLabel, Padding = new Thickness(8, 7, 8, 7), Margin = new Thickness(0, 0, 8, 0), FontSize = 11 };
+            primary.Click += (s, e) => MessageBox.Show($"فتح نافذة {primaryActionLabel}...", "إجراء جديد", MessageBoxButton.OK, MessageBoxImage.Information);
+            Grid.SetColumn(primary, 2);
+            toolbar.Children.Add(primary);
+
+            var export = new Button { Content = exportLabel, Padding = new Thickness(8, 7, 8, 7), FontSize = 11 };
+            export.Click += (s, e) => MessageBox.Show($"تم تجهيز {exportLabel} بصيغة Excel/PDF.", "تصدير البيانات", MessageBoxButton.OK, MessageBoxImage.Information);
+            Grid.SetColumn(export, 3);
+            toolbar.Children.Add(export);
+
+            return toolbar;
+        }
+
         private Border CreateKpiCard(string title, string value, string subtitle, string colorHex)
         {
             var border = new Border
@@ -326,6 +358,7 @@ namespace AccountingSystem.Desktop
         {
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = "إدارة المخازن والأصناف وجرد المعدات", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
+            stack.Children.Add(CreateListToolbar("بحث باسم الصنف أو SKU أو الباركود", "كل المستودعات", "إضافة صنف", "تصدير المخزون"));
 
             var dg = new DataGrid
             {
@@ -363,6 +396,7 @@ namespace AccountingSystem.Desktop
         {
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = "إدارة العملاء والموردين وحسابات الذمم المدينة والدائنة", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
+            stack.Children.Add(CreateListToolbar("بحث بالاسم أو كود الحساب أو الهاتف", "العملاء والموردون", "إضافة حساب", "تصدير كشف الحسابات"));
 
             var dg = new DataGrid
             {
@@ -398,6 +432,7 @@ namespace AccountingSystem.Desktop
         {
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = "سندات القبض والصرف والقيود المحاسبية اليومية المزدوجة", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
+            stack.Children.Add(CreateListToolbar("بحث برقم السند أو الطرف أو البيان", "كل أنواع السندات", "سند قبض / صرف", "تصدير السندات"));
 
             var dg = new DataGrid
             {
