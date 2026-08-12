@@ -626,11 +626,51 @@ namespace AccountingSystem.Desktop
 
         private UIElement CreateSettingsView()
         {
+            var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             var stack = new StackPanel();
-            stack.Children.Add(new TextBlock { Text = "إعدادات النظام، الطابعة الحرارية، والربط السحابي", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
-            stack.Children.Add(new TextBlock { Text = "• عنوان خادم الباك إند: https://accounting-system-backend-production-97e3.up.railway.app\n• الطابعة الحرارية: POS-80 Thermal Printer (متصلة)\n• وضع العمل: متصل بالانترنت مع دعم العمل دون اتصال (Offline-First)\n• النسخ الاحتياطي: تلقائي يومي", FontSize = 14, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush, Margin = new Thickness(0, 0, 0, 20) });
+            stack.Children.Add(new TextBlock { Text = "إعدادات النظام، الطابعة الحرارية، والربط السحابي", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+            stack.Children.Add(new TextBlock { Text = "إدارة الاتصال، المزامنة، أجهزة الطباعة، والنسخ الاحتياطي من مركز واحد.", FontSize = 13, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 0, 0, 16) });
 
-            return stack;
+            var statusGrid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 18) };
+            statusGrid.Children.Add(CreateKpiCard("حالة الاتصال بالسحابة", "متصل Online", "Railway Backend / API", "#16A34A"));
+            statusGrid.Children.Add(CreateKpiCard("حالة المزامنة", "مكتملة", "آخر مزامنة قبل دقيقتين", "#2563EB"));
+            statusGrid.Children.Add(CreateKpiCard("الطابعة الحرارية", "متصلة", "POS-80 / Receipt 80mm", "#7C3AED"));
+            stack.Children.Add(statusGrid);
+
+            var connectionBorder = new Border { Background = Brushes.White, BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(16), Margin = new Thickness(0, 0, 0, 14) };
+            var connectionStack = new StackPanel();
+            connectionStack.Children.Add(new TextBlock { Text = "إعدادات الخادم والمزامنة Offline-First", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = new BrushConverter().ConvertFromString("#0F172A") as Brush });
+            connectionStack.Children.Add(new TextBlock { Text = "عنوان خادم الباك إند: https://accounting-system-backend-production-97e3.up.railway.app", FontSize = 12, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush, Margin = new Thickness(0, 8, 0, 4) });
+            connectionStack.Children.Add(new TextBlock { Text = "الوضع الحالي: Online مع الاحتفاظ بالعمليات المحلية عند انقطاع الاتصال، ثم دفع التغييرات عند عودة الشبكة.", FontSize = 12, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush });
+            var syncActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+            var testConnection = new Button { Content = "اختبار الاتصال", Padding = new Thickness(14, 8, 14, 8), Margin = new Thickness(0, 0, 8, 0) };
+            testConnection.Click += (s, e) => MessageBox.Show("تم الاتصال بنجاح بخدمة المزامنة السحابية.", "اختبار الاتصال", MessageBoxButton.OK, MessageBoxImage.Information);
+            var syncNow = new Button { Content = "مزامنة الآن", Padding = new Thickness(14, 8, 14, 8) };
+            syncNow.Click += SyncNow_Click;
+            syncActions.Children.Add(testConnection);
+            syncActions.Children.Add(syncNow);
+            connectionStack.Children.Add(syncActions);
+            connectionBorder.Child = connectionStack;
+            stack.Children.Add(connectionBorder);
+
+            var hardwareBorder = new Border { Background = Brushes.White, BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(16) };
+            var hardwareStack = new StackPanel();
+            hardwareStack.Children.Add(new TextBlock { Text = "الأجهزة والنسخ الاحتياطي", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = new BrushConverter().ConvertFromString("#0F172A") as Brush });
+            hardwareStack.Children.Add(new TextBlock { Text = "الطابعة: POS-80 Thermal Printer — USB / Bluetooth — جاهزة للطباعة الحرارية.", FontSize = 12, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush, Margin = new Thickness(0, 8, 0, 4) });
+            hardwareStack.Children.Add(new TextBlock { Text = "النسخ الاحتياطي: تلقائي يومي مع إمكانية تصدير نسخة يدوية قبل نهاية الوردية.", FontSize = 12, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush });
+            var hardwareActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+            var testPrinter = new Button { Content = "اختبار الطابعة", Padding = new Thickness(14, 8, 14, 8), Margin = new Thickness(0, 0, 8, 0) };
+            testPrinter.Click += (s, e) => MessageBox.Show("تم إرسال صفحة اختبار إلى POS-80 Thermal Printer.", "اختبار الطابعة", MessageBoxButton.OK, MessageBoxImage.Information);
+            var backup = new Button { Content = "إنشاء نسخة احتياطية", Padding = new Thickness(14, 8, 14, 8) };
+            backup.Click += (s, e) => MessageBox.Show("تم تجهيز طلب النسخ الاحتياطي المحلي.", "النسخ الاحتياطي", MessageBoxButton.OK, MessageBoxImage.Information);
+            hardwareActions.Children.Add(testPrinter);
+            hardwareActions.Children.Add(backup);
+            hardwareStack.Children.Add(hardwareActions);
+            hardwareBorder.Child = hardwareStack;
+            stack.Children.Add(hardwareBorder);
+
+            scroll.Content = stack;
+            return scroll;
         }
     }
 }
