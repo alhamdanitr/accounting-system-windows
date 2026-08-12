@@ -548,12 +548,33 @@ namespace AccountingSystem.Desktop
         {
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = "إدارة تحويل المخزون بين المستودعات وتسجيل المرتجعات", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
-            stack.Children.Add(new TextBlock { Text = "• تحويل أصناف شبكات من المستودع الرئيسي إلى فرع المعرض.\n• تسجيل وتسوية مرتجعات المبيعات والمشتريات بضمان الجودة.", FontSize = 14, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush, Margin = new Thickness(0, 0, 0, 20) });
+            stack.Children.Add(new TextBlock { Text = "سجل موحد للتحويلات، مرتجعات المبيعات، مرتجعات المشتريات، وتسويات الكميات بين المستودعات.", FontSize = 13, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 0, 0, 14) });
+            stack.Children.Add(CreateListToolbar("بحث برقم الحركة أو الصنف أو المستودع", "كل الحركات المخزنية", "إنشاء سند تحويل", "تصدير الحركات"));
 
-            var btn = new Button { Content = "+ إنشاء سند تحويل مخزني جديد", Width = 220, HorizontalAlignment = HorizontalAlignment.Right };
-            btn.Click += (s, ev) => MessageBox.Show("فتح نافذة تحويل المخزون...", "تحويل", MessageBoxButton.OK, MessageBoxImage.Information);
-            stack.Children.Add(btn);
-
+            var dg = new DataGrid
+            {
+                AutoGenerateColumns = false,
+                CanUserAddRows = false,
+                IsReadOnly = true,
+                Height = 430,
+                Background = Brushes.White,
+                BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
+                RowHeight = 35
+            };
+            dg.Columns.Add(new DataGridTextColumn { Header = "رقم الحركة", Binding = new Binding("Reference"), Width = 120 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "النوع", Binding = new Binding("Type"), Width = 150 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "الصنف", Binding = new Binding("Product"), Width = 220 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "من / إلى", Binding = new Binding("Route"), Width = 180 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "الكمية", Binding = new Binding("Quantity"), Width = 80 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "التاريخ", Binding = new Binding("Date"), Width = 120 });
+            dg.Columns.Add(new DataGridTextColumn { Header = "المستخدم", Binding = new Binding("User"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+            dg.ItemsSource = new List<object>
+            {
+                new { Reference = "TRF-1002", Type = "تحويل مخزني", Product = "سويتش TP-Link 16-Port", Route = "الرئيسي ← فرع المعرض", Quantity = "6", Date = "2026-08-12", User = "المدير العام" },
+                new { Reference = "SAL-RET-504", Type = "مرتجع مبيعات", Product = "راوتر MikroTik RB951", Route = "العميل ← فرع المعرض", Quantity = "1", Date = "2026-08-11", User = "محاسب المبيعات" },
+                new { Reference = "PUR-RET-208", Type = "مرتجع مشتريات", Product = "محول طاقة 24V", Route = "فرع المعرض ← المورد", Quantity = "3", Date = "2026-08-10", User = "أمين المخزن" }
+            };
+            stack.Children.Add(dg);
             return stack;
         }
 
@@ -561,15 +582,41 @@ namespace AccountingSystem.Desktop
         {
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = "مركز التقارير المالية والضريبية الشاملة", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
-            stack.Children.Add(new TextBlock { Text = "• قائمة الدخل والأرباح والخسائر (Income Statement)\n• ميزان المراجعة والأستاذ العام (Trial Balance & Ledger)\n• تقارير مبيعات أصناف الشبكات والضرائب\n• تصدير الفوري للتقارير بصيغة PDF و Excel.", FontSize = 14, Foreground = new BrushConverter().ConvertFromString("#475569") as Brush, Margin = new Thickness(0, 0, 0, 20) });
+            stack.Children.Add(new TextBlock { Text = "اختر التقرير، حدد الفترة والمستودع، ثم اعرض النتائج أو اطبعها أو صدّرها للمشاركة.", FontSize = 13, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 0, 0, 14) });
+            stack.Children.Add(CreateListToolbar("بحث باسم التقرير أو التصنيف", "كل التقارير", "فتح التقرير", "تصدير التقرير"));
 
-            var exportStack = new StackPanel { Orientation = Orientation.Horizontal };
-            var pdfBtn = new Button { Content = "📄 تصدير تقرير الأرباح PDF", Width = 200, Margin = new Thickness(0, 0, 10, 0) };
+            var reportsGrid = new DataGrid
+            {
+                AutoGenerateColumns = false,
+                CanUserAddRows = false,
+                IsReadOnly = true,
+                Height = 300,
+                Background = Brushes.White,
+                BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
+                RowHeight = 35
+            };
+            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "اسم التقرير", Binding = new Binding("Name"), Width = 260 });
+            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "التصنيف", Binding = new Binding("Category"), Width = 130 });
+            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "الفترة", Binding = new Binding("Period"), Width = 140 });
+            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "آخر تحديث", Binding = new Binding("Updated"), Width = 140 });
+            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "الحالة", Binding = new Binding("Status"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+            reportsGrid.ItemsSource = new List<object>
+            {
+                new { Name = "قائمة الدخل والأرباح والخسائر", Category = "محاسبة", Period = "هذا الشهر", Updated = "قبل دقيقتين", Status = "جاهز للعرض" },
+                new { Name = "تقرير مبيعات أصناف الشبكات", Category = "مبيعات", Period = "آخر 30 يوماً", Updated = "قبل 5 دقائق", Status = "جاهز للعرض" },
+                new { Name = "حركة المخزون والأصناف الحرجة", Category = "مخزون", Period = "هذا الشهر", Updated = "قبل 8 دقائق", Status = "يحتاج مراجعة" },
+                new { Name = "كشف حساب العملاء والموردين", Category = "ذمم", Period = "حتى اليوم", Updated = "قبل دقيقة", Status = "جاهز للعرض" }
+            };
+            stack.Children.Add(reportsGrid);
+
+            var exportStack = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+            var previewBtn = new Button { Content = "👁 معاينة التقرير", Width = 170, Margin = new Thickness(0, 0, 10, 0) };
+            previewBtn.Click += (s, ev) => MessageBox.Show("تم فتح معاينة التقرير مع الفلاتر والملخص التنفيذي.", "معاينة التقرير", MessageBoxButton.OK, MessageBoxImage.Information);
+            var pdfBtn = new Button { Content = "📄 تصدير PDF", Width = 150, Margin = new Thickness(0, 0, 10, 0) };
             pdfBtn.Click += (s, ev) => MessageBox.Show("تم تصدير التقرير المالي بصيغة PDF بنجاح!", "تصدير", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            var excelBtn = new Button { Content = "📊 تصدير البيانات إلى Excel", Width = 200 };
+            var excelBtn = new Button { Content = "📊 تصدير Excel", Width = 150 };
             excelBtn.Click += (s, ev) => MessageBox.Show("تم تصدير البيانات إلى ملف Excel بنجاح!", "تصدير", MessageBoxButton.OK, MessageBoxImage.Information);
-
+            exportStack.Children.Add(previewBtn);
             exportStack.Children.Add(pdfBtn);
             exportStack.Children.Add(excelBtn);
             stack.Children.Add(exportStack);
