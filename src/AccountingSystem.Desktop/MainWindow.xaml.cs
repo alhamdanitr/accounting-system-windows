@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -142,7 +143,7 @@ namespace AccountingSystem.Desktop
         private UIElement CreatePOSView()
         {
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridLengthUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(380) });
 
             // Left: Products Catalog
@@ -183,13 +184,14 @@ namespace AccountingSystem.Desktop
             // Right: Invoice Cart & Checkout
             var rightBorder = new Border
             {
-                Grid.Column = 1,
                 Background = new BrushConverter().ConvertFromString("#F8FAFC") as Brush,
                 BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(16)
             };
+
+            Grid.SetColumn(rightBorder, 1);
 
             var rightStack = new StackPanel();
             rightStack.Children.Add(new TextBlock { Text = "سلة الفاتورة الحالية (POS Cart)", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
@@ -222,7 +224,7 @@ namespace AccountingSystem.Desktop
             totalsStack.Children.Add(new TextBlock { Text = "الإجمالي النهائي: 240.00 $", FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new BrushConverter().ConvertFromString("#2563EB") as Brush, Margin = new Thickness(0, 8, 0, 0) });
             rightStack.Children.Add(totalsStack);
 
-            var checkoutBtn = new Button { Content = "💳 إتمام البيع وطباعة الفاتورة الحرارية", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 12), Cursor = System.Windows.Input.Cursors.Hand };
+            var checkoutBtn = new Button { Content = "💳 إتمام البيع وطباعة الفاتورة الحرارية", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 12, 10, 12), Cursor = System.Windows.Input.Cursors.Hand };
             checkoutBtn.Click += (s, ev) => MessageBox.Show("تم إتمام عملية البيع بنجاح!\n• تم خصم الكميات من المخزون\n• تم تسجيل القيد المحاسبي\n• تم إرسال الفاتورة للطابعة الحرارية", "نجاح العملية", MessageBoxButton.OK, MessageBoxImage.Information);
             rightStack.Children.Add(checkoutBtn);
 
