@@ -115,8 +115,96 @@ namespace AccountingSystem.Desktop
             };
 
             stack.Children.Add(dg);
+            stack.Children.Add(CreateDashboardOperationsPanel());
             scroll.Content = stack;
             return scroll;
+        }
+
+        private Grid CreateDashboardOperationsPanel()
+        {
+            var panel = new Grid { Margin = new Thickness(0, 20, 0, 0) };
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var trendBorder = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(16),
+                Margin = new Thickness(0, 0, 12, 0)
+            };
+            var trendStack = new StackPanel();
+            trendStack.Children.Add(new TextBlock { Text = "اتجاه المبيعات خلال آخر 7 أيام", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = new BrushConverter().ConvertFromString("#0F172A") as Brush });
+            trendStack.Children.Add(new TextBlock { Text = "مؤشر تشغيلي للمتابعة اليومية قبل فتح التقارير التفصيلية", FontSize = 11, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 3, 0, 14) });
+
+            var bars = new UniformGrid { Columns = 7, Height = 150, VerticalAlignment = VerticalAlignment.Bottom };
+            var dayLabels = new[] { "السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "اليوم" };
+            var barHeights = new[] { 64.0, 92.0, 78.0, 112.0, 86.0, 128.0, 145.0 };
+            for (var i = 0; i < dayLabels.Length; i++)
+            {
+                var barStack = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center };
+                barStack.Children.Add(new Border
+                {
+                    Background = new BrushConverter().ConvertFromString(i == dayLabels.Length - 1 ? "#2563EB" : "#93C5FD") as Brush,
+                    Width = 28,
+                    Height = barHeights[i],
+                    CornerRadius = new CornerRadius(5, 5, 2, 2),
+                    Margin = new Thickness(4, 0, 4, 6)
+                });
+                barStack.Children.Add(new TextBlock { Text = dayLabels[i], FontSize = 10, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, HorizontalAlignment = HorizontalAlignment.Center });
+                bars.Children.Add(barStack);
+            }
+            trendStack.Children.Add(bars);
+            trendBorder.Child = trendStack;
+            panel.Children.Add(trendBorder);
+
+            var operationsBorder = new Border
+            {
+                Background = new BrushConverter().ConvertFromString("#F8FAFC") as Brush,
+                BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(16)
+            };
+            Grid.SetColumn(operationsBorder, 1);
+
+            var operationsStack = new StackPanel();
+            operationsStack.Children.Add(new TextBlock { Text = "تنبيهات وإجراءات تشغيلية", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = new BrushConverter().ConvertFromString("#0F172A") as Brush });
+            operationsStack.Children.Add(CreateAlertRow("3 أصناف وصلت إلى الحد الأدنى", "المخزون", "#DC2626"));
+            operationsStack.Children.Add(CreateAlertRow("5,230.00 $ أرصدة مستحقة", "الذمم المدينة", "#7C3AED"));
+            operationsStack.Children.Add(CreateAlertRow("آخر مزامنة منذ دقيقتين", "الحالة السحابية", "#16A34A"));
+            operationsStack.Children.Add(new Separator { Margin = new Thickness(0, 10, 0, 10), Background = new BrushConverter().ConvertFromString("#CBD5E1") as Brush });
+
+            var quickActions = new UniformGrid { Columns = 2 };
+            var posButton = new Button { Content = "فتح نقطة البيع", Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8), FontSize = 11 };
+            posButton.Click += NavPOS_Click;
+            var stockButton = new Button { Content = "فحص المخزون", Margin = new Thickness(6, 0, 0, 6), Padding = new Thickness(8), FontSize = 11 };
+            stockButton.Click += NavInventory_Click;
+            var reportButton = new Button { Content = "مركز التقارير", Margin = new Thickness(0, 6, 6, 0), Padding = new Thickness(8), FontSize = 11 };
+            reportButton.Click += NavReports_Click;
+            var voucherButton = new Button { Content = "سند قبض / صرف", Margin = new Thickness(6, 6, 0, 0), Padding = new Thickness(8), FontSize = 11 };
+            voucherButton.Click += NavVouchers_Click;
+            quickActions.Children.Add(posButton);
+            quickActions.Children.Add(stockButton);
+            quickActions.Children.Add(reportButton);
+            quickActions.Children.Add(voucherButton);
+            operationsStack.Children.Add(quickActions);
+            operationsBorder.Child = operationsStack;
+            panel.Children.Add(operationsBorder);
+
+            return panel;
+        }
+
+        private Border CreateAlertRow(string message, string category, string colorHex)
+        {
+            var row = new Border { Background = Brushes.White, BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(9), Margin = new Thickness(0, 10, 0, 0) };
+            var stack = new StackPanel();
+            stack.Children.Add(new TextBlock { Text = category, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = new BrushConverter().ConvertFromString(colorHex) as Brush });
+            stack.Children.Add(new TextBlock { Text = message, FontSize = 11, Foreground = new BrushConverter().ConvertFromString("#334155") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+            row.Child = stack;
+            return row;
         }
 
         private Border CreateKpiCard(string title, string value, string subtitle, string colorHex)
