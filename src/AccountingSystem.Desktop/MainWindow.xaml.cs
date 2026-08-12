@@ -344,14 +344,95 @@ namespace AccountingSystem.Desktop
             totalsStack.Children.Add(new TextBlock { Text = "الإجمالي النهائي: 240.00 $", FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new BrushConverter().ConvertFromString("#2563EB") as Brush, Margin = new Thickness(0, 8, 0, 0) });
             rightStack.Children.Add(totalsStack);
 
-            var checkoutBtn = new Button { Content = "💳 إتمام البيع وطباعة الفاتورة الحرارية", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 12, 10, 12), Cursor = System.Windows.Input.Cursors.Hand };
-            checkoutBtn.Click += (s, ev) => MessageBox.Show("تم إتمام عملية البيع بنجاح!\n• تم خصم الكميات من المخزون\n• تم تسجيل القيد المحاسبي\n• تم إرسال الفاتورة للطابعة الحرارية", "نجاح العملية", MessageBoxButton.OK, MessageBoxImage.Information);
-            rightStack.Children.Add(checkoutBtn);
+            var invoiceActions = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 0) };
+            var previewBtn = new Button { Content = "👁 معاينة قبل الطباعة", Padding = new Thickness(8, 10, 8, 10), Margin = new Thickness(0, 0, 6, 0), FontSize = 11 };
+            previewBtn.Click += (s, ev) => ShowInvoicePrintPreview();
+            invoiceActions.Children.Add(previewBtn);
+
+            var checkoutBtn = new Button { Content = "💳 إتمام البيع", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 10, 10, 10), Cursor = System.Windows.Input.Cursors.Hand };
+            checkoutBtn.Click += (s, ev) => MessageBox.Show("تم إتمام عملية البيع بنجاح!\n• تم خصم الكميات من المخزون\n• تم تسجيل القيد المحاسبي\n• أصبحت الفاتورة جاهزة للطباعة أو المشاركة", "نجاح العملية", MessageBoxButton.OK, MessageBoxImage.Information);
+            invoiceActions.Children.Add(checkoutBtn);
+            rightStack.Children.Add(invoiceActions);
 
             rightBorder.Child = rightStack;
             grid.Children.Add(rightBorder);
 
             return grid;
+        }
+
+        private void ShowInvoicePrintPreview()
+        {
+            var previewWindow = new Window
+            {
+                Title = "معاينة الفاتورة قبل الطباعة - INV-2026-005",
+                Width = 840,
+                Height = 650,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                FlowDirection = FlowDirection.RightToLeft,
+                Background = Brushes.White
+            };
+
+            var outer = new Grid { Margin = new Thickness(18) };
+            outer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            outer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            outer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var settings = new Border { Background = new BrushConverter().ConvertFromString("#F8FAFC") as Brush, BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(12), Margin = new Thickness(0, 0, 0, 12) };
+            var settingsRow = new StackPanel { Orientation = Orientation.Horizontal };
+            settingsRow.Children.Add(new TextBlock { Text = "الطابعة:", VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
+            var printer = new ComboBox { Width = 170, Padding = new Thickness(6), Margin = new Thickness(0, 0, 18, 0) };
+            printer.Items.Add(new ComboBoxItem { Content = "POS-80 Thermal Printer", IsSelected = true });
+            printer.Items.Add(new ComboBoxItem { Content = "Microsoft Print to PDF" });
+            settingsRow.Children.Add(printer);
+            settingsRow.Children.Add(new TextBlock { Text = "مقاس الورق:", VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
+            var paper = new ComboBox { Width = 100, Padding = new Thickness(6), Margin = new Thickness(0, 0, 18, 0) };
+            paper.Items.Add(new ComboBoxItem { Content = "Receipt", IsSelected = true });
+            paper.Items.Add(new ComboBoxItem { Content = "A5" });
+            paper.Items.Add(new ComboBoxItem { Content = "A4" });
+            settingsRow.Children.Add(paper);
+            settingsRow.Children.Add(new TextBlock { Text = "النسخ:", VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
+            settingsRow.Children.Add(new TextBox { Text = "1", Width = 45, Padding = new Thickness(6) });
+            settings.Child = settingsRow;
+            Grid.SetRow(settings, 0);
+            outer.Children.Add(settings);
+
+            var invoice = new Border { Background = Brushes.White, BorderBrush = new BrushConverter().ConvertFromString("#CBD5E1") as Brush, BorderThickness = new Thickness(1), Padding = new Thickness(28), Margin = new Thickness(50, 0, 50, 12) };
+            var invoiceStack = new StackPanel();
+            invoiceStack.Children.Add(new TextBlock { Text = "معرض الأفق للشبكات والإلكترونيات", FontSize = 20, FontWeight = FontWeights.ExtraBold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = new BrushConverter().ConvertFromString("#0F172A") as Brush });
+            invoiceStack.Children.Add(new TextBlock { Text = "فاتورة مبيعات رقم INV-2026-005  |  12/08/2026 14:20", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 5, 0, 18) });
+
+            var invoiceGrid = new DataGrid { AutoGenerateColumns = false, CanUserAddRows = false, IsReadOnly = true, Height = 220, RowHeight = 30, HeadersVisibility = DataGridHeadersVisibility.Column };
+            invoiceGrid.Columns.Add(new DataGridTextColumn { Header = "الصنف", Binding = new Binding("Item"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+            invoiceGrid.Columns.Add(new DataGridTextColumn { Header = "الكمية", Binding = new Binding("Qty"), Width = 70 });
+            invoiceGrid.Columns.Add(new DataGridTextColumn { Header = "السعر", Binding = new Binding("Price"), Width = 100 });
+            invoiceGrid.Columns.Add(new DataGridTextColumn { Header = "الإجمالي", Binding = new Binding("Total"), Width = 110 });
+            invoiceGrid.ItemsSource = new List<object>
+            {
+                new { Item = "راوتر ميكروتيك RB951UiAS-2HnD", Qty = "2", Price = "65.00 $", Total = "130.00 $" },
+                new { Item = "لفة كابل شبكات CAT6 أصلية (305م)", Qty = "1", Price = "110.00 $", Total = "110.00 $" }
+            };
+            invoiceStack.Children.Add(invoiceGrid);
+            invoiceStack.Children.Add(new TextBlock { Text = "الإجمالي النهائي: 240.00 $", FontSize = 18, FontWeight = FontWeights.ExtraBold, HorizontalAlignment = HorizontalAlignment.Left, Foreground = new BrushConverter().ConvertFromString("#2563EB") as Brush, Margin = new Thickness(0, 16, 0, 0) });
+            invoice.Child = invoiceStack;
+            Grid.SetRow(invoice, 1);
+            outer.Children.Add(invoice);
+
+            var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
+            var printBtn = new Button { Content = "🖨 طباعة الفاتورة", Padding = new Thickness(18, 9, 18, 9), Margin = new Thickness(8, 0, 0, 0) };
+            printBtn.Click += (s, e) => MessageBox.Show("تم إرسال الفاتورة إلى الطابعة المحددة.", "الطباعة", MessageBoxButton.OK, MessageBoxImage.Information);
+            var pdfBtn = new Button { Content = "📄 تصدير PDF", Padding = new Thickness(18, 9, 18, 9), Margin = new Thickness(8, 0, 0, 0) };
+            pdfBtn.Click += (s, e) => MessageBox.Show("تم تجهيز نسخة PDF من الفاتورة.", "التصدير", MessageBoxButton.OK, MessageBoxImage.Information);
+            var closeBtn = new Button { Content = "إغلاق", Padding = new Thickness(18, 9, 18, 9), Margin = new Thickness(8, 0, 0, 0) };
+            closeBtn.Click += (s, e) => previewWindow.Close();
+            footer.Children.Add(closeBtn);
+            footer.Children.Add(pdfBtn);
+            footer.Children.Add(printBtn);
+            Grid.SetRow(footer, 2);
+            outer.Children.Add(footer);
+
+            previewWindow.Content = outer;
+            previewWindow.ShowDialog();
         }
 
         private UIElement CreateInventoryView()
