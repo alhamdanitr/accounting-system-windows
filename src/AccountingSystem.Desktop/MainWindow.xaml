@@ -1,0 +1,8 @@
+<Window x:Class="AccountingSystem.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="نظام المحاسبة وإدارة المخزون" Height="720" Width="1280">
+    <Grid>
+        <TextBlock Text="مرحباً بك في نظام المحاسبة" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+    </Grid>
+</Window>
