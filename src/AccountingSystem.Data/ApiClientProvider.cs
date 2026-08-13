@@ -6,9 +6,14 @@ namespace AccountingSystem.Data
     {
         public const string BaseUrl = "https://accounting-system-backend-production-97e3.up.railway.app/api/v1/";
 
-        public static SyncApiClient GetClient()
+        public static AuthApiClient GetAuthClient()
         {
-            return new SyncApiClient(BaseUrl);
+            return new AuthApiClient(BaseUrl);
+        }
+
+        public static SyncApiClient GetSyncClient(string? accessToken = null)
+        {
+            return new SyncApiClient(BaseUrl, accessToken);
         }
     }
 }
