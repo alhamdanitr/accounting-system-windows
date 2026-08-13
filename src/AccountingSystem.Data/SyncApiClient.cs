@@ -1,6 +1,8 @@
 using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using AccountingSystem.Domain;
@@ -11,9 +13,15 @@ namespace AccountingSystem.Data
     {
         private readonly HttpClient _httpClient;
 
-        public SyncApiClient(string baseUrl)
+        public SyncApiClient(string baseUrl, string? accessToken = null)
         {
             _httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
+
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", accessToken);
+            }
         }
 
         public async Task<List<Product>> GetProductsAsync(string tenantId)
@@ -43,6 +51,26 @@ namespace AccountingSystem.Data
             catch
             {
                 return false;
+            }
+        }
+
+        public async Task<JsonElement?> PullSyncOperationsAsync(string tenantId, string deviceId)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync(
+                    $"sync/pull?tenantId={Uri.EscapeDataString(tenantId)}&deviceId={Uri.EscapeDataString(deviceId)}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                return await response.Content.ReadFromJsonAsync<JsonElement>();
+            }
+            catch
+            {
+                return null;
             }
         }
     }
