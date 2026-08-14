@@ -5,14 +5,22 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
+using AccountingSystem.Data;
 
 namespace AccountingSystem.Desktop
 {
     public partial class MainWindow : Window
     {
+        private readonly WindowsSession _session;
+        private readonly BackgroundSyncService _backgroundSync;
+
         public MainWindow()
         {
             InitializeComponent();
+            _session = ApiClientProvider.CreateSession();
+            _backgroundSync = new BackgroundSyncService(_session);
+            _backgroundSync.Start();
+            Closed += (_, _) => _backgroundSync.Dispose();
         }
 
         private void NavDashboard_Click(object sender, RoutedEventArgs e)
@@ -63,9 +71,13 @@ namespace AccountingSystem.Desktop
             ContentContainer.Child = CreateSettingsView();
         }
 
-        private void SyncNow_Click(object sender, RoutedEventArgs e)
+        private async void SyncNow_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("تمت مزامنة البيانات بنجاح مع السحابة (Railway Cloud Backend).\nجميع الحركات والعمليات محدثة.", "مزامنة سحابية", MessageBoxButton.OK, MessageBoxImage.Information);
+            var success = await _backgroundSync.PerformSyncAsync();
+            var message = success
+                ? "اكتملت المزامنة: تم إرسال العمليات المؤكدة وتحديث التغييرات الواردة."
+                : "تعذر إكمال المزامنة. ستبقى العمليات المحلية محفوظة لإعادة المحاولة.";
+            MessageBox.Show(message, "مزامنة سحابية", MessageBoxButton.OK, success ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
         private UIElement CreateDashboardView()
