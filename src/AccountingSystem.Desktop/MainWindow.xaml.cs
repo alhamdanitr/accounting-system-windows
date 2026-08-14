@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,8 @@ namespace AccountingSystem.Desktop
         public MainWindow()
         {
             InitializeComponent();
+            var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.0.0";
+            Title = $"{Title} — الإصدار {version}";
             _session = ApiClientProvider.CreateSession();
             _backgroundSync = new BackgroundSyncService(_session);
             _backgroundSync.Start();
