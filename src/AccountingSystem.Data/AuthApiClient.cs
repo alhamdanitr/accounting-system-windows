@@ -13,23 +13,26 @@ namespace AccountingSystem.Data
         string DevicePlatform,
         string DeviceKeyHash);
 
+    public sealed record RefreshRequest(string TenantId, string RefreshToken, string? DeviceId = null);
+
     public sealed record LoginResponse(
         string AccessToken,
+        string RefreshToken,
         string TokenType,
+        int ExpiresIn,
         LoginDevice Device,
         LoginUser User);
 
-    public sealed record LoginDevice(
-        string Id,
-        string Name,
-        string Platform);
+    public sealed record LoginDevice(string Id, string Name, string Platform);
 
     public sealed record LoginUser(
         string Id,
         string FullName,
-        string Email,
+        string? Email,
         string TenantId,
         string? BranchId);
+
+    public sealed record SimpleResponse(bool Success);
 
     public sealed class AuthApiClient
     {
@@ -45,17 +48,41 @@ namespace AccountingSystem.Data
             try
             {
                 using var response = await _httpClient.PostAsJsonAsync("auth/login", request);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return null;
-                }
-
-                return await response.Content.ReadFromJsonAsync<LoginResponse>();
+                return response.IsSuccessStatusCode
+                    ? await response.Content.ReadFromJsonAsync<LoginResponse>()
+                    : null;
             }
             catch
             {
                 return null;
+            }
+        }
+
+        public async Task<LoginResponse?> RefreshAsync(RefreshRequest request)
+        {
+            try
+            {
+                using var response = await _httpClient.PostAsJsonAsync("auth/refresh", request);
+                return response.IsSuccessStatusCode
+                    ? await response.Content.ReadFromJsonAsync<LoginResponse>()
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> LogoutAsync(RefreshRequest request)
+        {
+            try
+            {
+                using var response = await _httpClient.PostAsJsonAsync("auth/logout", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
             }
         }
     }

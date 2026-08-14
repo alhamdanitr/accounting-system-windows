@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Versioning;
 
 namespace AccountingSystem.Data
 {
@@ -9,6 +10,12 @@ namespace AccountingSystem.Data
         public static AuthApiClient GetAuthClient()
         {
             return new AuthApiClient(BaseUrl);
+        }
+
+        [SupportedOSPlatform("windows")]
+        public static WindowsSession CreateSession()
+        {
+            return new WindowsSession(BaseUrl);
         }
 
         public static SyncApiClient GetSyncClient(string? accessToken = null)
