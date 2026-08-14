@@ -51,10 +51,18 @@ namespace AccountingSystem.Desktop
                         state.Operations.Select(item => item.Operation).ToList());
                     var acknowledged = response.Results.Where(item => item.Status == "SYNCED")
                         .Select(item => item.IdempotencyKey).ToHashSet();
-                    var failed = response.Results.Where(item => item.Status != "SYNCED")
+                    var conflicts = state.Conflicts ?? new List<WindowsSyncConflict>();
+                    var conflictResults = response.Results.Where(item => item.Status == "CONFLICT")
+                        .ToDictionary(item => item.IdempotencyKey);
+                    foreach (var conflict in state.Operations.Where(item => conflictResults.ContainsKey(item.Operation.IdempotencyKey)))
+                    {
+                        var result = conflictResults[conflict.Operation.IdempotencyKey];
+                        conflicts.Add(new WindowsSyncConflict(conflict.Operation, result.ErrorMessage, DateTimeOffset.UtcNow));
+                    }
+                    var failed = response.Results.Where(item => item.Status != "SYNCED" && item.Status != "CONFLICT")
                         .ToDictionary(item => item.IdempotencyKey);
                     var remaining = state.Operations
-                        .Where(item => !acknowledged.Contains(item.Operation.IdempotencyKey))
+                        .Where(item => !acknowledged.Contains(item.Operation.IdempotencyKey) && !conflictResults.ContainsKey(item.Operation.IdempotencyKey))
                         .Select(item => failed.TryGetValue(item.Operation.IdempotencyKey, out var result)
                             ? item with
                             {
@@ -64,7 +72,7 @@ namespace AccountingSystem.Desktop
                             }
                             : item)
                         .ToList();
-                    _store.Save(new SyncQueueState(remaining, state.Cursor));
+                    _store.Save(new SyncQueueState(remaining, state.Cursor, conflicts));
                 }
 
                 var cursor = state.Cursor;
@@ -73,7 +81,8 @@ namespace AccountingSystem.Desktop
                 {
                     pull = await client.PullSyncOperationsAsync(_session.TenantId!, _session.DeviceId!, cursor, 100);
                     cursor = pull.NextCursor;
-                    _store.Save(new SyncQueueState(_store.Load().Operations, cursor));
+                    var latest = _store.Load();
+                    _store.Save(new SyncQueueState(latest.Operations, cursor, latest.Conflicts));
                 } while (pull.HasMore);
                 return true;
             }

@@ -14,9 +14,15 @@ namespace AccountingSystem.Data
         string? LastError = null,
         DateTimeOffset? NextAttemptAt = null);
 
+    public sealed record WindowsSyncConflict(
+        SyncOperationDto Operation,
+        string? ErrorMessage,
+        DateTimeOffset CreatedAt);
+
     public sealed record SyncQueueState(
         List<QueuedSyncOperation> Operations,
-        string Cursor = "0");
+        string Cursor = "0",
+        List<WindowsSyncConflict>? Conflicts = null);
 
     [SupportedOSPlatform("windows")]
     public sealed class WindowsSyncStore
