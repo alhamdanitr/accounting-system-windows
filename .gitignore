@@ -1,0 +1,13 @@
+# .NET build outputs
+**/bin/
+**/obj/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local secrets and settings
+.env
+*.local.json
