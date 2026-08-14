@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using AccountingSystem.Data;
+using AccountingSystem.Domain;
 
 namespace AccountingSystem.Desktop
 {
@@ -277,12 +280,15 @@ namespace AccountingSystem.Desktop
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(380) });
+            var pos = new POSViewModel(_session, _backgroundSync);
 
-            // Left: Products Catalog
             var leftStack = new StackPanel { Margin = new Thickness(0, 0, 16, 0) };
-            leftStack.Children.Add(new TextBlock { Text = "اختيار أصناف الشبكات والإلكترونيات للبيع السريع", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 10) });
-
-            var searchBox = new TextBox { Text = "بحث بالاسم، الباركود، أو SKU...", Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 10) };
+            leftStack.Children.Add(new TextBlock { Text = "كتالوج المنتجات من الشركة والمستودع المحدد", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 10) });
+            var warehouseSelector = new ComboBox { Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 10), DisplayMemberPath = "Name", IsEnabled = false };
+            leftStack.Children.Add(warehouseSelector);
+            var statusText = new TextBlock { Text = "جاري تحميل المستودعات...", Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 8) };
+            leftStack.Children.Add(statusText);
+            var searchBox = new TextBox { ToolTip = "بحث بالاسم أو الباركود أو SKU", Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 10), IsEnabled = false };
             leftStack.Children.Add(searchBox);
 
             var posDg = new DataGrid
@@ -293,27 +299,16 @@ namespace AccountingSystem.Desktop
                 Height = 450,
                 Background = Brushes.White,
                 BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
-                RowHeight = 35
+                RowHeight = 35,
+                IsEnabled = false
             };
-            posDg.Columns.Add(new DataGridTextColumn { Header = "كود الصنف (SKU)", Binding = new Binding("SKU"), Width = 110 });
-            posDg.Columns.Add(new DataGridTextColumn { Header = "اسم الصنف", Binding = new Binding("Name"), Width = 220 });
-            posDg.Columns.Add(new DataGridTextColumn { Header = "المستودع", Binding = new Binding("Warehouse"), Width = 110 });
-            posDg.Columns.Add(new DataGridTextColumn { Header = "المخزون المتوفر", Binding = new Binding("Stock"), Width = 100 });
-            posDg.Columns.Add(new DataGridTextColumn { Header = "سعر البيع ($)", Binding = new Binding("Price"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-
-            posDg.ItemsSource = new List<object>
-            {
-                new { SKU = "SKU-RB951", Name = "راوتر ميكروتيك RB951UiAS-2HnD", Warehouse = "الرئيسي", Stock = "14", Price = "65.00" },
-                new { SKU = "SKU-CC1009", Name = "راوتر ميكروتيك Cloud Core CC1009", Warehouse = "الرئيسي", Stock = "5", Price = "380.00" },
-                new { SKU = "SKU-SW16", Name = "سويتش تي بي لينك 16 بورت جيجابت", Warehouse = "فرع المعرض", Stock = "22", Price = "85.00" },
-                new { SKU = "SKU-CAT6", Name = "لفة كابل شبكات CAT6 أصلية (305م)", Warehouse = "الرئيسي", Stock = "45", Price = "110.00" },
-                new { SKU = "SKU-CAM4", Name = "كاميرا مراقبة داهوا IP 4MP خارجية", Warehouse = "فرع المعرض", Stock = "8", Price = "95.00" },
-                new { SKU = "SKU-RJ45", Name = "رأس موصل كابل RJ45 (علبة 100 حبة)", Warehouse = "الرئيسي", Stock = "60", Price = "12.00" }
-            };
+            posDg.Columns.Add(new DataGridTextColumn { Header = "SKU", Binding = new Binding("Sku"), Width = 110 });
+            posDg.Columns.Add(new DataGridTextColumn { Header = "اسم الصنف", Binding = new Binding("ArabicName"), Width = 220 });
+            posDg.Columns.Add(new DataGridTextColumn { Header = "المخزون", Binding = new Binding("CurrentStock"), Width = 90 });
+            posDg.Columns.Add(new DataGridTextColumn { Header = "السعر", Binding = new Binding("SalePrice"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
             leftStack.Children.Add(posDg);
             grid.Children.Add(leftStack);
 
-            // Right: Invoice Cart & Checkout
             var rightBorder = new Border
             {
                 Background = new BrushConverter().ConvertFromString("#F8FAFC") as Brush,
@@ -322,52 +317,109 @@ namespace AccountingSystem.Desktop
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(16)
             };
-
             Grid.SetColumn(rightBorder, 1);
-
             var rightStack = new StackPanel();
-            rightStack.Children.Add(new TextBlock { Text = "سلة الفاتورة الحالية (POS Cart)", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
+            rightStack.Children.Add(new TextBlock { Text = "سلة الفاتورة الحالية", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
 
-            var cartDg = new DataGrid
-            {
-                AutoGenerateColumns = false,
-                CanUserAddRows = false,
-                IsReadOnly = true,
-                Height = 200,
-                Background = Brushes.White,
-                RowHeight = 28
-            };
-            cartDg.Columns.Add(new DataGridTextColumn { Header = "الصنف", Binding = new Binding("Item"), Width = 140 });
-            cartDg.Columns.Add(new DataGridTextColumn { Header = "الكمية", Binding = new Binding("Qty"), Width = 50 });
-            cartDg.Columns.Add(new DataGridTextColumn { Header = "السعر", Binding = new Binding("Price"), Width = 65 });
+            var cartDg = new DataGrid { AutoGenerateColumns = false, CanUserAddRows = false, IsReadOnly = true, Height = 200, Background = Brushes.White, RowHeight = 28 };
+            cartDg.Columns.Add(new DataGridTextColumn { Header = "الصنف", Binding = new Binding("Product.ArabicName"), Width = 140 });
+            cartDg.Columns.Add(new DataGridTextColumn { Header = "الكمية", Binding = new Binding("Quantity"), Width = 50 });
+            cartDg.Columns.Add(new DataGridTextColumn { Header = "السعر", Binding = new Binding("Product.SalePrice"), Width = 65 });
             cartDg.Columns.Add(new DataGridTextColumn { Header = "الإجمالي", Binding = new Binding("Total"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-
-            cartDg.ItemsSource = new List<object>
-            {
-                new { Item = "راوتر ميكروتيك RB951", Qty = "2", Price = "65.00", Total = "130.00 $" },
-                new { Item = "لفة كابل CAT6", Qty = "1", Price = "110.00", Total = "110.00 $" }
-            };
+            cartDg.ItemsSource = pos.CartItems;
             rightStack.Children.Add(cartDg);
 
-            // Totals and Checkout Buttons
+            var subtotalText = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold };
+            var taxText = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 0) };
+            var grandTotalText = new TextBlock { FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new BrushConverter().ConvertFromString("#2563EB") as Brush, Margin = new Thickness(0, 8, 0, 0) };
             var totalsStack = new StackPanel { Margin = new Thickness(0, 15, 0, 15) };
-            totalsStack.Children.Add(new TextBlock { Text = "المجموع الفرعي: 240.00 $", FontSize = 13, FontWeight = FontWeights.SemiBold });
-            totalsStack.Children.Add(new TextBlock { Text = "ضريبة القيمة المضافة (0%): 0.00 $", FontSize = 13, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 0) });
-            totalsStack.Children.Add(new TextBlock { Text = "الإجمالي النهائي: 240.00 $", FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new BrushConverter().ConvertFromString("#2563EB") as Brush, Margin = new Thickness(0, 8, 0, 0) });
+            totalsStack.Children.Add(subtotalText);
+            totalsStack.Children.Add(taxText);
+            totalsStack.Children.Add(grandTotalText);
             rightStack.Children.Add(totalsStack);
 
-            var invoiceActions = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 0) };
-            var previewBtn = new Button { Content = "👁 معاينة قبل الطباعة", Padding = new Thickness(8, 10, 8, 10), Margin = new Thickness(0, 0, 6, 0), FontSize = 11 };
-            previewBtn.Click += (s, ev) => ShowInvoicePrintPreview();
-            invoiceActions.Children.Add(previewBtn);
+            void RefreshCart()
+            {
+                cartDg.Items.Refresh();
+                subtotalText.Text = $"المجموع الفرعي: {pos.SubTotal:N2}";
+                taxText.Text = $"الضريبة: {pos.TaxTotal:N2}";
+                grandTotalText.Text = $"الإجمالي النهائي: {pos.GrandTotal:N2}";
+            }
 
-            var checkoutBtn = new Button { Content = "💳 إتمام البيع", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 10, 10, 10), Cursor = System.Windows.Input.Cursors.Hand };
-            checkoutBtn.Click += (s, ev) => MessageBox.Show("تم إتمام عملية البيع بنجاح!\n• تم خصم الكميات من المخزون\n• تم تسجيل القيد المحاسبي\n• أصبحت الفاتورة جاهزة للطباعة أو المشاركة", "نجاح العملية", MessageBoxButton.OK, MessageBoxImage.Information);
+            var invoiceActions = new UniformGrid { Columns = 2 };
+            var clearButton = new Button { Content = "إفراغ السلة", Padding = new Thickness(8, 10, 8, 10), Margin = new Thickness(0, 0, 6, 0) };
+            clearButton.Click += (_, _) => { pos.ClearCart(); RefreshCart(); };
+            invoiceActions.Children.Add(clearButton);
+            var checkoutBtn = new Button { Content = "إتمام البيع", Background = new BrushConverter().ConvertFromString("#16A34A") as Brush, Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(10, 10, 10, 10), IsEnabled = false };
+            checkoutBtn.Click += async (_, _) =>
+            {
+                checkoutBtn.IsEnabled = false;
+                if (pos.EnqueueSale(out var message))
+                {
+                    await _backgroundSync.PerformSyncAsync();
+                    MessageBox.Show(message, "نقطة البيع", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else MessageBox.Show(message, "تعذر إتمام البيع", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RefreshCart();
+                checkoutBtn.IsEnabled = true;
+            };
             invoiceActions.Children.Add(checkoutBtn);
             rightStack.Children.Add(invoiceActions);
-
             rightBorder.Child = rightStack;
             grid.Children.Add(rightBorder);
+
+            searchBox.TextChanged += (_, _) =>
+            {
+                var query = searchBox.Text.Trim();
+                posDg.ItemsSource = string.IsNullOrWhiteSpace(query)
+                    ? pos.AvailableProducts
+                    : pos.AvailableProducts.Where(product => product.ArabicName.Contains(query, StringComparison.OrdinalIgnoreCase) || product.Sku.Contains(query, StringComparison.OrdinalIgnoreCase) || (product.Barcode?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+            };
+            posDg.MouseDoubleClick += (_, _) =>
+            {
+                if (posDg.SelectedItem is Product product) { pos.AddToCart(product); RefreshCart(); }
+            };
+            warehouseSelector.SelectionChanged += async (_, _) =>
+            {
+                if (warehouseSelector.SelectedItem is WarehouseDto warehouse)
+                {
+                    try
+                    {
+                        statusText.Text = "جاري تحميل مخزون المستودع...";
+                        warehouseSelector.IsEnabled = false;
+                        await pos.SelectWarehouseAsync(warehouse);
+                        posDg.ItemsSource = pos.AvailableProducts;
+                        posDg.IsEnabled = true;
+                        searchBox.IsEnabled = true;
+                        checkoutBtn.IsEnabled = true;
+                        statusText.Text = $"{warehouse.Name} — {pos.AvailableProducts.Count} صنف متاح";
+                    }
+                    catch (Exception error)
+                    {
+                        statusText.Text = "تعذر تحميل منتجات المستودع";
+                        MessageBox.Show(error.Message, "خطأ في بيانات نقطة البيع", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally { warehouseSelector.IsEnabled = true; }
+                }
+            };
+            _ = LoadPosAsync();
+
+            async Task LoadPosAsync()
+            {
+                try
+                {
+                    await pos.LoadAsync();
+                    warehouseSelector.ItemsSource = pos.Warehouses;
+                    warehouseSelector.SelectedItem = pos.SelectedWarehouse;
+                    warehouseSelector.IsEnabled = pos.Warehouses.Count > 0;
+                    if (pos.Warehouses.Count == 0) statusText.Text = "لا توجد مستودعات نشطة لهذه الشركة";
+                }
+                catch (Exception error)
+                {
+                    statusText.Text = "يتطلب POS جلسة مصادق عليها وصلاحية المنتجات والمخزون";
+                    MessageBox.Show(error.Message, "تعذر تحميل نقطة البيع", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
 
             return grid;
         }

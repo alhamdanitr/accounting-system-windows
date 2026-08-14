@@ -12,6 +12,7 @@ namespace AccountingSystem.Domain
         public string? EnglishName { get; set; }
         public decimal PurchasePrice { get; set; }
         public decimal SalePrice { get; set; }
+        public decimal TaxRate { get; set; }
         public decimal CurrentStock { get; set; }
         public bool Active { get; set; } = true;
     }

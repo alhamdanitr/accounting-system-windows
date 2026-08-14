@@ -9,6 +9,14 @@ using AccountingSystem.Domain;
 
 namespace AccountingSystem.Data
 {
+    public sealed record WarehouseDto(
+        string Id,
+        string TenantId,
+        string? BranchId,
+        string Name,
+        string Code,
+        bool Active);
+
     public sealed record SyncOperationDto(
         string IdempotencyKey,
         string EntityType,
@@ -67,7 +75,22 @@ namespace AccountingSystem.Data
 
         public async Task<List<Product>> GetProductsAsync(string tenantId)
         {
-            using var response = await _httpClient.GetAsync($"products/{Uri.EscapeDataString(tenantId)}");
+            using var response = await _httpClient.GetAsync($"products?tenantId={Uri.EscapeDataString(tenantId)}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<Product>>() ?? new List<Product>();
+        }
+
+        public async Task<List<WarehouseDto>> GetWarehousesAsync(string tenantId)
+        {
+            using var response = await _httpClient.GetAsync($"inventory/warehouses/{Uri.EscapeDataString(tenantId)}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<WarehouseDto>>() ?? new List<WarehouseDto>();
+        }
+
+        public async Task<List<Product>> GetProductsForWarehouseAsync(string tenantId, string warehouseId)
+        {
+            using var response = await _httpClient.GetAsync(
+                $"inventory/products/{Uri.EscapeDataString(tenantId)}?warehouseId={Uri.EscapeDataString(warehouseId)}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<List<Product>>() ?? new List<Product>();
         }
