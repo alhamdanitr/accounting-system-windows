@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -16,6 +17,30 @@ namespace AccountingSystem.Data
         string Name,
         string Code,
         bool Active);
+
+    public sealed record DailySalesCustomerDto(string Name);
+
+    public sealed record DailySaleDto(
+        string Id,
+        string InvoiceNumber,
+        DateTime CreatedAt,
+        decimal GrandTotal,
+        decimal PaidAmount,
+        decimal DueAmount,
+        string PaymentType,
+        DailySalesCustomerDto? Customer);
+
+    public sealed record DailySalesSummary(
+        int Count,
+        decimal TotalRevenue,
+        decimal TotalPaid,
+        decimal TotalDue);
+
+    public sealed record DailySalesReportDto(
+        string Date,
+        WarehouseDto Warehouse,
+        DailySalesSummary Summary,
+        IReadOnlyList<DailySaleDto> Sales);
 
     public sealed record SyncOperationDto(
         string IdempotencyKey,
@@ -78,6 +103,16 @@ namespace AccountingSystem.Data
             using var response = await _httpClient.GetAsync($"products?tenantId={Uri.EscapeDataString(tenantId)}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<List<Product>>() ?? new List<Product>();
+        }
+
+        public async Task<DailySalesReportDto> GetDailySalesReportAsync(string tenantId, string warehouseId, DateTime date)
+        {
+            var dateValue = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            using var response = await _httpClient.GetAsync(
+                $"reports/sales/daily/{Uri.EscapeDataString(tenantId)}?warehouseId={Uri.EscapeDataString(warehouseId)}&date={Uri.EscapeDataString(dateValue)}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<DailySalesReportDto>()
+                ?? throw new InvalidOperationException("The daily sales report response was empty.");
         }
 
         public async Task<List<WarehouseDto>> GetWarehousesAsync(string tenantId)

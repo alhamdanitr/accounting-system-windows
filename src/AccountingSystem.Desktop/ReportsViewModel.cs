@@ -1,19 +1,46 @@
 using System;
+using System.Threading.Tasks;
+using AccountingSystem.Data;
 
 namespace AccountingSystem.Desktop
 {
-    public class ReportsViewModel
+    public sealed class ReportsViewModel
     {
-        public decimal TotalSalesToday { get; set; } = 3450.00m;
-        public int TotalInvoicesToday { get; set; } = 42;
-        public decimal TotalExpensesToday { get; set; } = 210.00m;
-        public decimal NetProfitToday => TotalSalesToday - TotalExpensesToday;
+        private readonly WindowsSession _session;
 
-        public void RefreshMetrics(decimal sales, int invoices, decimal expenses)
+        public DailySalesReportDto? DailySalesReport { get; private set; }
+        public bool IsLoading { get; private set; }
+        public string? ErrorMessage { get; private set; }
+
+        public ReportsViewModel(WindowsSession session)
         {
-            TotalSalesToday = sales;
-            TotalInvoicesToday = invoices;
-            TotalExpensesToday = expenses;
+            _session = session;
+        }
+
+        public async Task LoadDailySalesAsync(string warehouseId, DateTime date)
+        {
+            if (!_session.IsAuthenticated || string.IsNullOrWhiteSpace(_session.TenantId))
+                throw new InvalidOperationException("لا توجد جلسة Windows مصادق عليها");
+            if (string.IsNullOrWhiteSpace(warehouseId))
+                throw new ArgumentException("يجب تحديد المستودع قبل تحميل التقرير", nameof(warehouseId));
+
+            IsLoading = true;
+            ErrorMessage = null;
+            try
+            {
+                var client = _session.CreateSyncClient()
+                    ?? throw new InvalidOperationException("تعذر إنشاء عميل API للجلسة الحالية");
+                DailySalesReport = await client.GetDailySalesReportAsync(_session.TenantId, warehouseId, date);
+            }
+            catch (Exception error)
+            {
+                ErrorMessage = error.Message;
+                throw;
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
     }
 }

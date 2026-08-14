@@ -16,6 +16,8 @@ namespace AccountingSystem.Desktop
     {
         private readonly WindowsSession _session;
         private readonly BackgroundSyncService _backgroundSync;
+        private string? _currentWarehouseId;
+        private string? _currentWarehouseName;
 
         public MainWindow()
         {
@@ -388,6 +390,8 @@ namespace AccountingSystem.Desktop
                         statusText.Text = "جاري تحميل مخزون المستودع...";
                         warehouseSelector.IsEnabled = false;
                         await pos.SelectWarehouseAsync(warehouse);
+                        _currentWarehouseId = warehouse.Id;
+                        _currentWarehouseName = warehouse.Name;
                         posDg.ItemsSource = pos.AvailableProducts;
                         posDg.IsEnabled = true;
                         searchBox.IsEnabled = true;
@@ -644,48 +648,128 @@ namespace AccountingSystem.Desktop
 
         private UIElement CreateReportsView()
         {
+            var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             var stack = new StackPanel();
-            stack.Children.Add(new TextBlock { Text = "مركز التقارير المالية والضريبية الشاملة", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 12) });
-            stack.Children.Add(new TextBlock { Text = "اختر التقرير، حدد الفترة والمستودع، ثم اعرض النتائج أو اطبعها أو صدّرها للمشاركة.", FontSize = 13, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 0, 0, 14) });
-            stack.Children.Add(CreateListToolbar("بحث باسم التقرير أو التصنيف", "كل التقارير", "فتح التقرير", "تصدير التقرير"));
+            stack.Children.Add(new TextBlock { Text = "تقرير المبيعات اليومية", FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 6) });
+            stack.Children.Add(new TextBlock { Text = "بيانات حقيقية من الشركة والمستودع الحالي، محمية بجلسة المستخدم وصلاحية التقارير.", FontSize = 13, Foreground = new BrushConverter().ConvertFromString("#64748B") as Brush, Margin = new Thickness(0, 0, 0, 14) });
 
-            var reportsGrid = new DataGrid
+            var filters = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+            filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+            filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+            filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var datePicker = new DatePicker { SelectedDate = DateTime.Today, Padding = new Thickness(8), Margin = new Thickness(0, 0, 10, 0) };
+            var warehouseSelector = new ComboBox { DisplayMemberPath = "Name", Padding = new Thickness(8), Margin = new Thickness(0, 0, 10, 0) };
+            var loadButton = new Button { Content = "تحديث التقرير", Padding = new Thickness(10, 6, 10, 6), IsEnabled = false };
+            var statusText = new TextBlock { Text = "جاري تجهيز التقرير...", Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
+            Grid.SetColumn(datePicker, 0);
+            Grid.SetColumn(warehouseSelector, 1);
+            Grid.SetColumn(loadButton, 2);
+            Grid.SetColumn(statusText, 3);
+            filters.Children.Add(datePicker);
+            filters.Children.Add(warehouseSelector);
+            filters.Children.Add(loadButton);
+            filters.Children.Add(statusText);
+            stack.Children.Add(filters);
+
+            var kpis = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 16) };
+            var invoiceCount = CreateKpiCard("عدد الفواتير", "—", "لليوم المحدد", "#2563EB");
+            var revenue = CreateKpiCard("إجمالي المبيعات", "—", "الإيراد الإجمالي", "#16A34A");
+            var paid = CreateKpiCard("المحصل نقدًا", "—", "إجمالي المدفوع", "#7C3AED");
+            var due = CreateKpiCard("المتبقي", "—", "الذمم المستحقة", "#DC2626");
+            kpis.Children.Add(invoiceCount);
+            kpis.Children.Add(revenue);
+            kpis.Children.Add(paid);
+            kpis.Children.Add(due);
+            stack.Children.Add(kpis);
+
+            var salesGrid = new DataGrid
             {
                 AutoGenerateColumns = false,
                 CanUserAddRows = false,
                 IsReadOnly = true,
-                Height = 300,
+                Height = 360,
                 Background = Brushes.White,
                 BorderBrush = new BrushConverter().ConvertFromString("#E2E8F0") as Brush,
-                RowHeight = 35
+                RowHeight = 32
             };
-            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "اسم التقرير", Binding = new Binding("Name"), Width = 260 });
-            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "التصنيف", Binding = new Binding("Category"), Width = 130 });
-            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "الفترة", Binding = new Binding("Period"), Width = 140 });
-            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "آخر تحديث", Binding = new Binding("Updated"), Width = 140 });
-            reportsGrid.Columns.Add(new DataGridTextColumn { Header = "الحالة", Binding = new Binding("Status"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-            reportsGrid.ItemsSource = new List<object>
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "رقم الفاتورة", Binding = new Binding("InvoiceNumber"), Width = 140 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "العميل", Binding = new Binding("CustomerName"), Width = 180 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "وقت الإنشاء", Binding = new Binding("CreatedAt"), Width = 150 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "طريقة الدفع", Binding = new Binding("PaymentType"), Width = 120 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "الإجمالي", Binding = new Binding("GrandTotal"), Width = 110 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "المدفوع", Binding = new Binding("PaidAmount"), Width = 110 });
+            salesGrid.Columns.Add(new DataGridTextColumn { Header = "المتبقي", Binding = new Binding("DueAmount"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+            stack.Children.Add(salesGrid);
+
+            var reportViewModel = new ReportsViewModel(_session);
+            void SetKpi(Border card, string value)
             {
-                new { Name = "قائمة الدخل والأرباح والخسائر", Category = "محاسبة", Period = "هذا الشهر", Updated = "قبل دقيقتين", Status = "جاهز للعرض" },
-                new { Name = "تقرير مبيعات أصناف الشبكات", Category = "مبيعات", Period = "آخر 30 يوماً", Updated = "قبل 5 دقائق", Status = "جاهز للعرض" },
-                new { Name = "حركة المخزون والأصناف الحرجة", Category = "مخزون", Period = "هذا الشهر", Updated = "قبل 8 دقائق", Status = "يحتاج مراجعة" },
-                new { Name = "كشف حساب العملاء والموردين", Category = "ذمم", Period = "حتى اليوم", Updated = "قبل دقيقة", Status = "جاهز للعرض" }
-            };
-            stack.Children.Add(reportsGrid);
+                if (card.Child is StackPanel panel && panel.Children.Count > 1 && panel.Children[1] is TextBlock text) text.Text = value;
+            }
 
-            var exportStack = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-            var previewBtn = new Button { Content = "👁 معاينة التقرير", Width = 170, Margin = new Thickness(0, 0, 10, 0) };
-            previewBtn.Click += (s, ev) => MessageBox.Show("تم فتح معاينة التقرير مع الفلاتر والملخص التنفيذي.", "معاينة التقرير", MessageBoxButton.OK, MessageBoxImage.Information);
-            var pdfBtn = new Button { Content = "📄 تصدير PDF", Width = 150, Margin = new Thickness(0, 0, 10, 0) };
-            pdfBtn.Click += (s, ev) => MessageBox.Show("تم تصدير التقرير المالي بصيغة PDF بنجاح!", "تصدير", MessageBoxButton.OK, MessageBoxImage.Information);
-            var excelBtn = new Button { Content = "📊 تصدير Excel", Width = 150 };
-            excelBtn.Click += (s, ev) => MessageBox.Show("تم تصدير البيانات إلى ملف Excel بنجاح!", "تصدير", MessageBoxButton.OK, MessageBoxImage.Information);
-            exportStack.Children.Add(previewBtn);
-            exportStack.Children.Add(pdfBtn);
-            exportStack.Children.Add(excelBtn);
-            stack.Children.Add(exportStack);
+            async Task LoadReportAsync()
+            {
+                if (warehouseSelector.SelectedItem is not WarehouseDto warehouse || datePicker.SelectedDate is not DateTime selectedDate) return;
+                try
+                {
+                    loadButton.IsEnabled = false;
+                    statusText.Text = "جاري تحميل المبيعات...";
+                    await reportViewModel.LoadDailySalesAsync(warehouse.Id, selectedDate);
+                    var report = reportViewModel.DailySalesReport!;
+                    _currentWarehouseId = warehouse.Id;
+                    _currentWarehouseName = warehouse.Name;
+                    SetKpi(invoiceCount, report.Summary.Count.ToString());
+                    SetKpi(revenue, report.Summary.TotalRevenue.ToString("N2"));
+                    SetKpi(paid, report.Summary.TotalPaid.ToString("N2"));
+                    SetKpi(due, report.Summary.TotalDue.ToString("N2"));
+                    salesGrid.ItemsSource = report.Sales.Select(sale => new
+                    {
+                        sale.InvoiceNumber,
+                        CustomerName = sale.Customer?.Name ?? "عميل نقدي",
+                        CreatedAt = sale.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                        sale.PaymentType,
+                        GrandTotal = sale.GrandTotal.ToString("N2"),
+                        PaidAmount = sale.PaidAmount.ToString("N2"),
+                        DueAmount = sale.DueAmount.ToString("N2"),
+                    }).ToList();
+                    statusText.Text = $"{warehouse.Name} — {report.Date} — {report.Sales.Count} فاتورة";
+                }
+                catch (Exception error)
+                {
+                    salesGrid.ItemsSource = null;
+                    statusText.Text = "تعذر تحميل التقرير";
+                    MessageBox.Show(error.Message, "تقرير المبيعات اليومية", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                finally { loadButton.IsEnabled = true; }
+            }
 
-            return stack;
+            loadButton.Click += async (_, _) => await LoadReportAsync();
+            _ = InitializeReportAsync();
+
+            async Task InitializeReportAsync()
+            {
+                try
+                {
+                    var client = _session.CreateSyncClient() ?? throw new InvalidOperationException("لا توجد جلسة مصادق عليها");
+                    if (string.IsNullOrWhiteSpace(_session.TenantId)) throw new InvalidOperationException("لا توجد شركة في الجلسة الحالية");
+                    var warehouses = await client.GetWarehousesAsync(_session.TenantId);
+                    warehouseSelector.ItemsSource = warehouses;
+                    var selected = warehouses.FirstOrDefault(w => w.Id == _currentWarehouseId) ?? warehouses.FirstOrDefault();
+                    warehouseSelector.SelectedItem = selected;
+                    loadButton.IsEnabled = selected is not null;
+                    if (selected is not null) await LoadReportAsync();
+                    else statusText.Text = "لا توجد مستودعات نشطة للشركة الحالية";
+                }
+                catch (Exception error)
+                {
+                    statusText.Text = "يتطلب التقرير جلسة وصلاحية reports.view";
+                    MessageBox.Show(error.Message, "تعذر تهيئة التقرير", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+
+            scroll.Content = stack;
+            return scroll;
         }
 
         private UIElement CreateSettingsView()
